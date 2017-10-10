@@ -22,7 +22,10 @@ import org.eclipse.californium.core.CoapClient;
 import org.eclipse.californium.core.CoapHandler;
 import org.eclipse.californium.core.CoapObserveRelation;
 import org.eclipse.californium.core.CoapResponse;
+import org.eclipse.californium.elements.UDPConnector;
 
+import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.time.Duration;
 import java.util.Map;
 import java.util.Random;
@@ -30,9 +33,9 @@ import java.util.Random;
 /**
  * This is a Sample topology for storm where we consume a stream of words and executes an append operation to them.
  */
-public final class ExclamationTopology {
+public final class HeronCoap {
 
-    private ExclamationTopology() {}
+    private HeronCoap() {}
 
     public static void main(String[] args) throws Exception {
 
@@ -102,7 +105,8 @@ public final class ExclamationTopology {
         private SpoutOutputCollector collector;
         private String URI;
         private CoapClient client;
-     
+        private UDPConnector udpconnector;
+        private InetSocketAddress address;
 
         // Intantiate with no throttle duration
         public TestWordSpout(String URI)
@@ -120,7 +124,9 @@ public final class ExclamationTopology {
                 TopologyContext context,
                 SpoutOutputCollector collector) {
         	
-        	client = new CoapClient("coap://californium.eclipse.org:5683/obs");
+        	address = new InetSocketAddress("coap://californium.eclipse.org/obs", 5683);
+        	udpconnector = new UDPConnector(address);
+        	//client = new CoapClient("coap://californium.eclipse.org:5683/obs");
         	 this.collector = collector;	
         	
         	
@@ -128,13 +134,25 @@ public final class ExclamationTopology {
         }
 
         // This method is called to generate the next sequence for the spout
-        public void nextTuple() {
+        public void nextTuple()  {
+        	
+        	try
+        	{
+        		udpconnector.start();
+        		
+        	}
+        	catch (IOException e)
+        	{
+        		System.out.println(e.getMessage());
+        	}
+        		
+        	
         	CoapObserveRelation relation = client.observe(
     				new CoapHandler() {
     					@Override public void onLoad(CoapResponse response) {
     						String content = response.getResponseText();
     						collector.emit(new Values(content));
-    						System.out.println("NOTIFICATION: " + content);
+    						//System.out.println("NOTIFICATION: " + content);
     					}
     					
     					@Override public void onError() {
@@ -149,8 +167,6 @@ public final class ExclamationTopology {
         public void declareOutputFields(OutputFieldsDeclarer declarer) {
             declarer.declare(new Fields("word")); // Here we tagethe output tuple with the tag "word"
         }
-
-	
 
     }
 

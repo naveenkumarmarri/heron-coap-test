@@ -28,5 +28,7 @@
 		</attributes>
 	</classpathentry>
 	<classpathentry exported="true" kind="lib" path="/home/naveen/iu_backup/git/crest/californium/californium-core/target/californium-core-1.1.0-SNAPSHOT-sources.jar"/>
+	<classpathentry kind="lib" path="/home/naveen/iu_backup/git/crest/californium/element-connector/target/element-connector-1.1.0-SNAPSHOT.jar"/>
+	<classpathentry kind="lib" path="/home/naveen/iu_backup/git/crest/californium/demo-apps/cf-helloworld-server/target/cf-helloworld-server-1.1.0-SNAPSHOT.jar"/>
 	<classpathentry kind="output" path="target/classes"/>
 </classpath>

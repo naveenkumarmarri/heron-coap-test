@@ -1,6 +1,7 @@
 package tutorial;
 
 import backtype.storm.metric.api.GlobalMetrics;
+
 import org.apache.storm.Config;
 import org.apache.storm.LocalCluster;
 import org.apache.storm.StormSubmitter;
@@ -22,6 +23,9 @@ import org.eclipse.californium.core.CoapClient;
 import org.eclipse.californium.core.CoapHandler;
 import org.eclipse.californium.core.CoapObserveRelation;
 import org.eclipse.californium.core.CoapResponse;
+import org.eclipse.californium.core.CoapServer;
+import org.eclipse.californium.core.server.resources.CoapExchange;
+import org.eclipse.californium.core.CoapResource;
 
 import java.time.Duration;
 import java.util.Map;
@@ -30,9 +34,9 @@ import java.util.Random;
 /**
  * This is a Sample topology for storm where we consume a stream of words and executes an append operation to them.
  */
-public final class ExclamationTopology {
+public final class ExclamationTopology_Simulator {
 
-    private ExclamationTopology() {}
+    private ExclamationTopology_Simulator() {}
 
     public static void main(String[] args) throws Exception {
 
@@ -45,7 +49,7 @@ public final class ExclamationTopology {
 
         // Build the topology to have a 'word' spout and 'exclaim' bolt
         // also, set the 'word' spout bolt to have two instances
-        builder.setSpout("word", new TestWordSpout("coap://californium.eclipse.org:5683/obs"), parallelism);
+        builder.setSpout("word", new TestWordSpout("coap://127.0.0.1:5683/helloWorld"), parallelism);
 
         // Specify that 'exclaim1' bolt should consume from 'word' spout using
         // Shuffle grouping running in four instances
@@ -96,12 +100,13 @@ public final class ExclamationTopology {
     /**
      * Word Spout that outputs a ranom word among a list of words continuously
      */
-    static class TestWordSpout extends BaseRichSpout {
+    static class TestWordSpout extends BaseRichSpout{
 
         private static final long serialVersionUID = -3217886193225455451L;
         private SpoutOutputCollector collector;
         private String URI;
-        private CoapClient client;
+        private CoapServer server;
+        private String content;
      
 
         // Intantiate with no throttle duration
@@ -120,29 +125,26 @@ public final class ExclamationTopology {
                 TopologyContext context,
                 SpoutOutputCollector collector) {
         	
-        	client = new CoapClient("coap://californium.eclipse.org:5683/obs");
-        	 this.collector = collector;	
-        	
-        	
-           
+        	server = new CoapServer(5683);
+        	server.add(new CoapResource("helloWorld")  {
+	        		 @Override
+	        	 	   public void handlePut(CoapExchange exchange) {
+	        	 		 content = exchange.getRequestText();
+					
+        	  	   }
+        	    }); 
+        	server.start();
+        	this.collector = collector;	
+			
         }
 
         // This method is called to generate the next sequence for the spout
         public void nextTuple() {
-        	CoapObserveRelation relation = client.observe(
-    				new CoapHandler() {
-    					@Override public void onLoad(CoapResponse response) {
-    						String content = response.getResponseText();
-    						collector.emit(new Values(content));
-    						System.out.println("NOTIFICATION: " + content);
-    					}
-    					
-    					@Override public void onError() {
-    						System.err.println("OBSERVING FAILED (press enter to exit)");
-    					}
-    				});
-    		
+
+         collector.emit(new Values("content"));
+        	
         }
+
 
         // This method speisifes the output field labels
         @Override
@@ -153,10 +155,14 @@ public final class ExclamationTopology {
 	
 
     }
+    
+
 
     /**
      * ExclamationBolt Bolt that takes a string word as outputs the same word with exclamation marks appended
      */
+    
+    
     static class ExclamationBolt extends BaseRichBolt {
 
         private static final long serialVersionUID = 1184860508880121352L;
