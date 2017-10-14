@@ -86,24 +86,27 @@
       </plugin>
 
       <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>exec-maven-plugin</artifactId>
-        <version>1.2.1</version>
-        <executions>
-          <execution>
-            <goals>
-              <goal>exec</goal>
-            </goals>
-          </execution>
-        </executions>
-        <configuration>
-          <executable>java</executable>
-          <includeProjectDependencies>true</includeProjectDependencies>
-          <includePluginDependencies>false</includePluginDependencies>
-          <mainClass>${heron.topology}</mainClass>
-          <classpathScope>compile</classpathScope>
-        </configuration>
-      </plugin>
+    <groupId>org.codehaus.mojo</groupId>
+    <artifactId>exec-maven-plugin</artifactId>
+    <version>1.4.0</version>
+    <executions>
+    <execution>
+    <goals>
+        <goal>exec</goal>
+    </goals>
+    </execution>
+    </executions>
+    <configuration>
+        <executable>java</executable>
+        <includeProjectDependencies>true</includeProjectDependencies>
+        <includePluginDependencies>false</includePluginDependencies>
+        <classpathScope>compile</classpathScope>
+        <mainClass>${heron.topology}</mainClass>
+        <cleanupDaemonThreads>false</cleanupDaemonThreads> 
+    </configuration>
+</plugin>
+
+
     </plugins>
   </build>
 </project>

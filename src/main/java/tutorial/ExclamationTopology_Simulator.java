@@ -16,25 +16,22 @@ import org.apache.storm.tuple.Fields;
 import org.apache.storm.tuple.Tuple;
 import org.apache.storm.tuple.Values;
 import org.apache.storm.utils.Utils;
-import org.eclipse.californium.core.CoapClient;
-import org.eclipse.californium.core.CoapObserveRelation;
 
-import org.eclipse.californium.core.CoapClient;
-import org.eclipse.californium.core.CoapHandler;
-import org.eclipse.californium.core.CoapObserveRelation;
-import org.eclipse.californium.core.CoapResponse;
 import org.eclipse.californium.core.CoapServer;
+import org.eclipse.californium.core.coap.CoAP.ResponseCode;
 import org.eclipse.californium.core.server.resources.CoapExchange;
 import org.eclipse.californium.core.CoapResource;
+import org.eclipse.californium.core.network.CoapEndpoint;
 
-import java.time.Duration;
+import java.io.Serializable;
 import java.util.Map;
-import java.util.Random;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * This is a Sample topology for storm where we consume a stream of words and executes an append operation to them.
  */
-public final class ExclamationTopology_Simulator {
+public final class ExclamationTopology_Simulator{
 
     private ExclamationTopology_Simulator() {}
 
@@ -45,11 +42,11 @@ public final class ExclamationTopology_Simulator {
 
 
         // Define the parallelism hint for the topololgy
-        final int parallelism = 2;
+        final int parallelism = 1;
 
         // Build the topology to have a 'word' spout and 'exclaim' bolt
         // also, set the 'word' spout bolt to have two instances
-        builder.setSpout("word", new TestWordSpout("coap://127.0.0.1:5683/helloWorld"), parallelism);
+        builder.setSpout("word", new TestWordSpout(), parallelism);
 
         // Specify that 'exclaim1' bolt should consume from 'word' spout using
         // Shuffle grouping running in four instances
@@ -61,6 +58,10 @@ public final class ExclamationTopology_Simulator {
 
         // Set the run mode to be debug
         conf.setDebug(true);
+        
+        //conf.setSkipMissingKryoRegistrations(false);
+
+
 
         // Set the number of tuples to be in flight at any given time to be 10
         conf.setMaxSpoutPending(10);
@@ -68,6 +69,7 @@ public final class ExclamationTopology_Simulator {
 
         // Set JVM options to dump the heap when out of memory
         conf.put(Config.TOPOLOGY_WORKER_CHILDOPTS, "-XX:+HeapDumpOnOutOfMemoryError");
+        //conf.put(Config.TRANSACTIONAL_ZOOKEEPER_SERVERS, new CoapServer(8888));
 
         // If the topology name is specified run in the cluster mode, otherwise run in
         // Simulator mode
@@ -100,7 +102,7 @@ public final class ExclamationTopology_Simulator {
     /**
      * Word Spout that outputs a ranom word among a list of words continuously
      */
-    static class TestWordSpout extends BaseRichSpout{
+    static class TestWordSpout extends BaseRichSpout implements Serializable{
 
         private static final long serialVersionUID = -3217886193225455451L;
         private SpoutOutputCollector collector;
@@ -110,38 +112,59 @@ public final class ExclamationTopology_Simulator {
      
 
         // Intantiate with no throttle duration
-        public TestWordSpout(String URI)
+        public TestWordSpout()
         {
-        	this.URI =  URI;
-        	//String URI= "coap://californium.eclipse.org:5683/obs";
+        	//this.server = server;
+        	
+        	
         }
+        
             
         // Intantiate with specified throtte duration
         
-
+        
         @SuppressWarnings("rawtypes")
         public void open(
                 Map conf,
                 TopologyContext context,
                 SpoutOutputCollector collector) {
         	
-        	server = new CoapServer(5683);
-        	server.add(new CoapResource("helloWorld")  {
-	        		 @Override
-	        	 	   public void handlePut(CoapExchange exchange) {
-	        	 		 content = exchange.getRequestText();
-					
-        	  	   }
-        	    }); 
-        	server.start();
+        	
+        	
+        	ExecutorService executorService = Executors.newFixedThreadPool(1);
+
+        	executorService.execute(new Runnable() {
+        	    public void run() {
+        	    	server = new CoapServer(1112);
+                	//server.addEndpoint(new CoapEndpoint(5683));
+                	server.add(new CoapResource("helloWorld")  {
+        	        		 @Override
+        	        	 	   public void handlePUT(CoapExchange exchange) {
+        	        	 		 content = exchange.getRequestText();
+        	        	 		 exchange.respond(ResponseCode.CHANGED);
+        	        	 		 
+        	        	 		 }
+                	    }); 
+                	server.start();
+                	System.out.println("after server started");
+        	    }
+        	});
+
+        	
+        	
+        	//server.addEndpoint(new EndPoint("helloWorld"));
         	this.collector = collector;	
+        	
+        	System.out.println("after server started");
 			
         }
-
+        
+       
+        
         // This method is called to generate the next sequence for the spout
         public void nextTuple() {
 
-         collector.emit(new Values("content"));
+         collector.emit(new Values(content));
         	
         }
 
